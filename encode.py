@@ -65,13 +65,8 @@ def read_mgf(fn, count=-1, default_charge=-1):
 
     return spectra
 
-# convert spectra into model input format
-def spectra2vector(spectra):
-    return tuple([inputs[key] for key in inputs])
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--query', type=str,
-                    help='query file path', default='query.mgf')
 parser.add_argument('--lib', type=str,
                     help='Spectral library file path', default='lib.mgf')
 parser.add_argument('--fasta', type=str,
@@ -79,7 +74,7 @@ parser.add_argument('--fasta', type=str,
 parser.add_argument('--mode', type=int,
                     help='Search mode. 1: spectral library search; 2: Fasta db search; 3: Mixed search', default=3)
 parser.add_argument('--output', type=str,
-                    help='output file path', default='example.tsv')
+                    help='output embedding file path', default='db.npy')
 parser.add_argument('--model', type=str,
                     help='Pretained model path', default='model.h5')
 parser.add_argument('--batch_size', type=int,
@@ -90,15 +85,6 @@ args = parser.parse_args()
 print('Loading model....')
 tf.keras.backend.clear_session()
 model = k.models.load_model(args.model, compile=0)
-
-print("Starting reading input mgf of:", args.input)
-input_stream = mgf.read(open(args.input, "r"), convert_arrays=1, read_charges=False,
-                    dtype='float32', use_index=False)
-
-query = tojson(input_stream)
-
-f = open(args.output, 'w+')
-f.writelines(['TITLE\tSeq\tScore\n'])
 
 def predict_spectra(seqs):
     pass
@@ -111,7 +97,7 @@ def build_db():
     if not args.mode == 2: # not fasta db only        
         print("# Starting reading spectral library mgf of:", args.lib)
 
-        spectral = tojson(lib_stream)
+        spectral = read_mgf(args.lib)
         peps += [sp['pep'] for sp in spectral]
 
         for batch in iterate(spectral, args.batch_size * 128):

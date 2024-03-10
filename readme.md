@@ -10,6 +10,7 @@ __Visit [https://predfull.com/](https://predfull.com/) to check related works__
 
 ## Update History
 
+* 2024.03.07: Second version.
 * 2023.10.28: First version.
 
 ## Method
