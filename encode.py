@@ -12,6 +12,8 @@ from tensorflow_addons.layers import InstanceNormalization
 
 from utils import *
 
+from predfull import predfull
+
 def read_mgf(fn, count=-1, default_charge=-1):
     data = mgf.read(open(fn, "r"), convert_arrays=1, read_charges=False,
                         dtype='float32', use_index=False)
@@ -77,6 +79,8 @@ parser.add_argument('--output', type=str,
                     help='output embedding file path', default='db.npy')
 parser.add_argument('--model', type=str,
                     help='Pretained model path', default='model.h5')
+parser.add_argument('--predfull_model', type=str,
+                    help='Pretained predfull model path (for predicting spectra)', default='pm.h5')
 parser.add_argument('--batch_size', type=int,
                     help='number of spectra per step', default=128)
 
@@ -108,27 +112,27 @@ def build_db():
     vec_db = []
 
     if not args.mode == 1: # not spectral only
+        predfull = predfull(args.predfull_model)
+
         seqs = readfasta(args.fasta)
 
         if args.mode == 3: # mixed
             known = set(sp['pep'] for sp in spectral)
 
-            seqs = [seq for seq in seqs if not seq in known]
+            seqs = [seq for seq in seqs if not seq['pep'] in known]
     
-        peps += seqs
+        peps += [seq['pep'] for seq in seqs]
         # db_sps = predict_spectra(fasta)
             
         for batch in iterate(seqs, args.batch_size * 128):
             predicted_sps = predfull(batch, args.batch_size)
             vec_db += model.predict(data_seq(predicted_sps, processor, args.batch_size))
 
+            
+    print('Finished,', len(peps), 'spectra in total,', len(set(peps)), 'unique peptides')
+
     return peps, vec_db + lib_vec
 
 
-def search(query, db):
-    pass
+build_db()
 
-
-
-f.close()
-print('Finished,', i, 'spectra in total')
