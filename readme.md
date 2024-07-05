@@ -2,7 +2,7 @@
 
 Source code for SpecEncoder: Deep Metric Learning for Accurate Peptide Identification in Proteomics
 
-## __work in progress__
+# __DONT USE FOR NOW, CODE MIXUP DUE TO GIT ERROR, WILL FIX SOON__
 
 Free for academic uses. Licensed under LGPL.
 
