@@ -545,6 +545,7 @@ def read_mgf(fn, count=-1, default_charge=-1):
 
         spectra.append(
             {
+                "title": param["title"],
                 "pep": pep,
                 "charge": c,
                 "type": 3,

@@ -30,7 +30,7 @@ tf.keras.backend.clear_session()
 model = k.models.load_model(args.model, compile=0, safe_mode=False)
 
 print("# Starting reading spectral library mgf of:", args.mgf)
-spectral = read_mgf(args.mgf)
+spectra = read_mgf(args.mgf)
 
 
 # hyper parameter
@@ -111,11 +111,11 @@ def input_processor(spectra):
 
 print("# Starting encoding spectra....")
 vectors = []
-for batch in iterate(spectral, args.batch_size * 128):
-    vectors.append(model.predict(data_seq(spectral, input_processor, args.batch_size)))
+for batch in iterate(spectra, args.batch_size * 128):
+    vectors += list(model.predict(data_seq(batch, input_processor, args.batch_size)))
 
 with open(args.output, 'wb+') as f:
-    pickle.dump([spectral, vectors], f)
+    pickle.dump([spectra, vectors], f)
     f.close()
 
 print("# Done!")
