@@ -103,7 +103,7 @@ def n_encode(seq, length, em):
 
 def encode(seq, length=-1, out=None):
     if length <= 0: length = len(seq)
-        
+
     out = np.zeros((length, oh_dim), dtype='float32') if out is None else out
 
     return n_encode(seq, length, out)
@@ -139,7 +139,7 @@ def convert_mgf(sps):
         param = sp['params']
 
         if not 'charge' in param: raise
-            
+
         c = int(str(param['charge'][0])[0])
 
         pep = title = param['title']
@@ -180,7 +180,7 @@ def readmgf(fn, type):
     data = mgf.read(file, convert_arrays=1, read_charges=False, dtype='float32', use_index=False)
 
     codes = convert_mgf(data)
-    
+
     for sp in codes:
         sp['type'] = types[type]
     return codes
@@ -348,7 +348,7 @@ class data_processor():
             th = kth(its, int(abs(clipn(sigma=2)) * self.hyper.kth))
             mzs = mzs[its > th] #mzs first
             its = its[its > th]
-            
+
         return mzs, its
 
     def get_inputs(self, sps, training=1):
@@ -407,7 +407,7 @@ class data_processor():
             pep, mass, c, mzs, its = sp['pep'], sp['mass'], sp['charge'], sp['mz'], sp['it']
             pep = sp['pep'].upper().replace('I', 'L')
             seq = toseq(pep)
-            
+
             encode(seq, out=rst.peps[i])
 
             # aux tasks
@@ -418,7 +418,7 @@ class data_processor():
 
             AA_pairs(seq, out=rst.di[i])
             rst.nums[i] = compose(pep)
-            
+
             for c in pep:
                 rst.exist[i][charMap[c] - 1] = 1
 
@@ -481,7 +481,7 @@ class spec_encoder():
         return k.models.Model([inp, mz_inp, c_inp, ], v1, name='sp_net')
 
     @staticmethod
-    def auxiliary_tasks(v1, hyper, act='relu', norm='in'):        
+    def auxiliary_tasks(v1, hyper, act='relu', norm='in'):
         def vec_dense(x, nodes, name, act='sigmoid', layers=tuple(), **kws):
             for l in layers: x = res(x, l, 3, act='relu', **kws)
             x = k.layers.GlobalAveragePooling1D()(x)
@@ -533,7 +533,7 @@ class spec_encoder():
         sp_vector = spmodel(model_inputs)
 
         aux_outputs = spec_encoder.auxiliary_tasks(sp_vector, hyper)
-        
+
         final_pep = k.layers.Conv1D(oh_dim, kernel_size=1, padding='same', use_bias=1)(sp_vector)
         final_pep = k.layers.Activation('softmax', name='peps', dtype='float32')(final_pep)
 
@@ -670,15 +670,45 @@ class train_mgr():
         self.dm, self.novo, *self.other_model = self.builder.build(**kws)
         return self.dm, self.novo
 
-    def prepare_data(self):
-        self.trainingset = i2l(filter_spectra(readmgf('train.mgf', 'hcd')))
-        self.valset = i2l(filter_spectra(readmgf('validation.mgf', 'hcd')))
+    def prepare_data(self, MAX_REP=10):
+        sps = i2l(filter_spectra(readmgf('spectra.mgf', 'hcd')))
+
+        sp_count = {}
+        for sp in sps:
+            spkey = str(sp['charge']) + sp['pep'].upper().replace('I', 'L')
+            if not spkey in sp_count:
+                sp_count[spkey] = 1
+            else:
+                sp_count[spkey] += 1
+
+        sps_train = {}
+        sps_valid = {}
+
+        for sp in sps:
+            pep = sp['pep'].upper().replace('I', 'L')
+            spkey = str(sp['charge']) + pep
+
+            if sp_count[spkey] < 2: continue # only peptide have replicates used for training
+
+            if not spkey in sps_valid:
+                sps_valid[spkey] = sp
+            else:
+                if not spkey in sps_train: sps_train[spkey] = []
+
+                if len(sps_train[spkey]) < MAX_REP:
+                    sps_train[spkey].append(sp)
+
+        self.trainingset = sps_train
+        self.valset = sps_valid
+
+        self.pepid = {p: i for i, p in enumerate(list(sps_train.keys()))}
+        pirnt(f"Number of peptides:", len(self.pepid))
 
     def compile(self, bsz=None, lr=None):
         ### para
-        hyper.dynamic.eps = 50
-        hyper.dynamic.bsz = 32 * int(hyper.pre * 4 * 2.5) #* 2
-        hyper.dynamic.lr = lr if lr else (hyper.dynamic.bsz / 1024) * 0.0009 * 16 * 6
+        hyper.dynamic.eps = 150
+        hyper.dynamic.bsz = 1024
+        hyper.dynamic.lr = lr if lr else (hyper.dynamic.bsz / 1024) * 0.0009 * 8
 
         hyper.dynamic.opt = radam(lr=hyper.dynamic.lr)
         self.builder.compile(opt=hyper.dynamic.opt)
