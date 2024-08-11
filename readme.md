@@ -10,6 +10,7 @@ __Visit [https://predfull.com/](https://predfull.com/) to check related works__
 
 ## Update History
 
+* 2024.08.09: Error in training codes have been FIXED.
 * 2024.07.14: Error in Code and model weights have been FIXED.
 * 2024.03.07: Second version.
 * 2023.10.28: First version.
@@ -79,6 +80,4 @@ Then we can perform searching:
 
 ## Train this model
 
-__Work in progress__
-
-See `train.py` for sample training codes
+See `train.py` for sample training codes. Note that the input MGF should have multiple instance for each peptide, i.e., only peptide have replicates used for training.
